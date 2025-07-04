@@ -1,0 +1,168 @@
+---
+title: "Plant_Breeding_mini_project"
+author: "Shagun Grewal"
+date: "2025-07-03"
+output: html_document
+---
+Title: Multi-Season, Multi-Location Evaluation of Plant Varieties
+
+📋 Objective: Evaluate the performance of four plant varieties (V1 to V4) across two locations and two seasons using key traits.
+
+
+```{r}
+library(tidyverse)
+df<-read.csv("~/Desktop/Plant_Breeding_Mini_Project_Data.csv")
+```
+Package installed, call made for the package using library function.
+Data import
+
+
+
+Part A: Data exploration. Which variety had the highest average yield overall?
+```{r}
+df %>% 
+  group_by(Variety) %>% 
+  summarise(Average_yield = mean(Yield_kg_per_ha)) %>% 
+  arrange(desc(Average_yield))
+```
+Use of pipe operator to pipe the data into the subsequent functions.
+
+
+
+Create a boxplot of yield per variety, colored by location
+```{r}
+df %>% 
+  ggplot(aes(x=Variety, y=Yield_kg_per_ha, colour = Location))+
+  geom_boxplot(alpha=0.5)+
+  theme_bw()+
+labs(x="Variety", y="Yield (Kg/Ha)")
+```
+
+
+
+Summarize average disease score per season
+```{r}
+df %>% 
+  group_by(Season) %>% 
+summarise(Average_disease = mean(Disease_Score_1to9))
+Average_disease
+```
+
+
+
+
+🔹 Part B: Statistical Analysis Perform a two-way ANOVA: Yield , Variety + Location
+```{r}
+  anova_model<- aov(Yield_kg_per_ha ~ Variety + Location, data =df)
+summary(anova_model)
+```
+Interpretation of ANOVA
+Effect of Variety on Yield:
+Since the p-value for varietal variation is less than 0.05, we reject the null hypothesis at the 5% significance level.
+Null Hypothesis (H₀): There is no significant variation in yield due to varietal differences.
+Alternative Hypothesis (H₁): There is significant variation in yield attributable to varietal differences.
+This indicates that the observed yield differences between varieties are statistically significant and unlikely to be due to chance.
+
+
+
+Test interaction: Yield , Variety and Location  
+```{r}
+Interaction<- aov(Yield_kg_per_ha ~ Variety * Location, data = df)
+summary(Interaction)
+```
+Interpretation of interactions
+Varietal Differences:
+A low p-value combined with a high F-value indicates that the variation in yield attributable to varietal differences is statistically significant. This suggests that at least one variety yields differently compared to others in a meaningful way.
+Main Effect of Location:
+A high p-value and low F-value suggest that location does not have a statistically significant effect on yield. In other words, yield differences across locations are likely due to random variation rather than a consistent environmental effect.
+Interaction Between Variety and Location:
+Similarly, a high p-value and low F-value for the interaction term indicate that location does not significantly influence the relative performance of varieties. This implies that the varietal ranking in terms of yield remains stable across different environments.
+
+
+
+Check if plant height correlates with yield
+```{r}
+correlation<- cor.test(df$Yield_kg_per_ha,df$Plant_Height_cm)
+correlation
+```
+Interpretation of correlation 
+Although the t-value indicates a weak association between plant height and yield, the p-value exceeding 0.05 suggests a high probability of observing such a relationship even in the absence of a true underlying effect. Therefore, the observed correlation is likely due to random variation, and we fail to reject the null hypothesis—implying that there is no statistically significant relationship between plant height and yield in this dataset.
+
+
+
+🔹 Part C: Modeling Fit a linear model: Yield ~ Variety + Disease_Score + Plant_Height
+```{r}
+lm_model<- lm(Yield_kg_per_ha ~ Variety + Disease_Score_1to9 + Plant_Height_cm , data = df)
+summary(lm_model)
+```
+Interpretation of Linear regression model 
+The residuals exhibit a wide range, indicating variability in the model’s prediction errors in both directions. However, the median residual being close to zero suggests that, on average, the model does not exhibit systematic bias, and its predictions are reasonably centered. This supports the model’s acceptability from a basic diagnostic standpoint.
+Interpretation of Coefficients:
+The high t-values and low p-values associated with the variety coefficients (particularly Variety 3 and 4) indicate that these differences in yield are statistically significant and likely reflect true underlying variation rather than random noise. In contrast, the effects of Disease Score and Plant Height are not statistically significant (p > 0.05), suggesting that their influence on yield in this model may be minimal or confounded by other factors.
+Notably, the positive estimate for Disease Score implies that higher scores are associated with increased yield. Given that the expected biological relationship would typically suggest lower yields under higher disease pressure, this result may indicate an inversely scaled disease rating, where 1 corresponds to severe infection and 9 to resistance. Similarly, the negative coefficient for Plant Height suggests a decrease in yield with increasing height, though this relationship is also not statistically significant and may be attributable to random variation in the data.
+The difference in yield between Variety 1 and Variety 2 is not statistically significant, as reflected by the high p-value and low t-statistic. However, the differences between Variety 1 and Varieties 3 and 4 are statistically significant, indicating that these two varieties yield significantly more than the baseline (Variety 1) under the conditions of this dataset.
+
+
+
+Check assumptions: residual plots
+```{r}
+lm_model %>% 
+  plot(lm_model, which = 1)
+```
+Interpretation from residual plot
+The residuals are symmetrically distributed across both negative and positive directions, indicating no major systematic bias in the model’s predictions. Additionally, the dataset exhibits a wide range of variance, suggesting substantial variability in yield values across observations.
+
+
+
+Check assumptions: normality
+```{r}
+lm_model %>% 
+  plot(lm_model, which = 2)
+```
+Interpretation 
+The Quantile-Quantile (Q-Q) plot shows that the residuals lie approximately along the reference line, indicating that the assumption of normality is reasonably satisfied.
+
+
+
+Which trait is most predictive of yield?
+```{r}
+summary(lm_model)
+```
+Interpretation
+The low p-values associated with the varietal coefficients indicate that variety is a statistically significant predictor of yield. Specifically, Variety 3 and Variety 4 show the greatest positive effect on yield compared to the reference variety, suggesting that they are the most influential predictors in the model for yield estimation.
+
+
+
+🔹 Part D: Data visualization: Create a faceted plot of yield by variety across seasons
+```{r}
+ggplot(data = df,
+         mapping = aes(x=Variety,
+                       y=Yield_kg_per_ha))+
+  geom_boxplot(alpha=0.5, aes(fill=Location))+
+  labs(title ="Crop Yield data (2022-2023)", x="Variety",y="Yield (Kg/Ha)")+
+  facet_wrap(~Season)+
+  theme_bw()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
